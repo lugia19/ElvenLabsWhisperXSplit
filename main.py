@@ -1,6 +1,4 @@
-import os.path
 import string
-import sys
 
 import whisperx
 import whisper
@@ -23,10 +21,9 @@ def generate_and_splice_text(quotedText, postText):
     audioFile = "audio.mp3"
     splicedAudioFile = "cut_audio.mp3"
 
-    if not os.path.exists(audioFile):
-        print(f'Text to be generated: "{quotedText}" {postText}')
-        audioData = voice.generate_audio_bytes(f'"{quotedText}" {postText}')
-        elevenlabslib.helpers.save_audio_bytes(audioData,audioFile,outputFormat="mp3")
+    print(f'Text to be generated: "{quotedText}" {postText}')
+    audioData = voice.generate_audio_bytes(f'"{quotedText}" {postText}')
+    elevenlabslib.helpers.save_audio_bytes(audioData,audioFile,outputFormat="mp3")
 
     # transcribe with original whisper
     model = whisper.load_model("medium.en", device)
