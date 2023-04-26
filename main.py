@@ -1,3 +1,4 @@
+import os.path
 import string
 import sys
 
@@ -22,9 +23,10 @@ def generate_and_splice_text(quotedText, postText):
     audioFile = "audio.mp3"
     splicedAudioFile = "cut_audio.mp3"
 
-    print(f'Text to be generated: "{quotedText}" {postText}')
-    audioData = voice.generate_audio_bytes(f'"{quotedText}" {postText}')
-    elevenlabslib.helpers.save_audio_bytes(audioData,audioFile,outputFormat="mp3")
+    if not os.path.exists(audioFile):
+        print(f'Text to be generated: "{quotedText}" {postText}')
+        audioData = voice.generate_audio_bytes(f'"{quotedText}" {postText}')
+        elevenlabslib.helpers.save_audio_bytes(audioData,audioFile,outputFormat="mp3")
 
     # transcribe with original whisper
     model = whisper.load_model("medium.en", device)
@@ -74,6 +76,8 @@ def generate_and_splice_text(quotedText, postText):
             print("Possibly found the start?")
             possibleStarts.append(index)
 
+    fullAudioSegment = AudioSegment.from_mp3(audioFile)
+
     for possibleStart in possibleStarts:
         print(f"Checking from {possibleStart}")
         counter = 0
@@ -86,7 +90,13 @@ def generate_and_splice_text(quotedText, postText):
         if counter == len(quotedWords):
             print("Found our match.")
             quoteStartTime = word_segments_stripped[possibleStart]["start"]
-            quoteEndTime = word_segments_stripped[possibleStart+len(quotedWords)-1]["end"]
+            endIndex = possibleStart+len(quotedWords)-1
+            if endIndex == len(word_segments_stripped):
+                quoteEndTime = fullAudioSegment.duration_seconds
+            else:
+                quoteEndTime = word_segments_stripped[endIndex]["end"]
+                endOffset = (word_segments_stripped[endIndex+1]["start"] - quoteEndTime)/2
+                quoteEndTime += endOffset
             break
         else:
             print("Did not match the entire phrase.")
@@ -94,7 +104,6 @@ def generate_and_splice_text(quotedText, postText):
     print(f"Identified start time: {quoteStartTime}\nIdentified end time: {quoteEndTime}")
 
     #Use pydub to extract the section of audio.
-    fullAudioSegment = AudioSegment.from_mp3(audioFile)
     cutAudioSegment = fullAudioSegment[quoteStartTime*1000:quoteEndTime*1000]
     cutAudioSegment.export(splicedAudioFile, format="mp3")
 
